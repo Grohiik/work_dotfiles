@@ -1,10 +1,3 @@
-# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
-# Initialization code that may require console input (password prompts, [y/n]
-# confirmations, etc.) must go above this block; everything else may go below.
-if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
-fi
-
 # Set the directory we want to store zinit and plugins
 ZINIT_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}/zinit/zinit.git"
 
@@ -17,8 +10,46 @@ fi
 # Source/Load zinit
 source "${ZINIT_HOME}/zinit.zsh"
 
-# Add in Powerlevel10k
-zinit ice depth=1; zinit light romkatv/powerlevel10k
+# Enable transient prompt
+# Makes the prompt "disapear" on old cmd output
+zle-line-init() {
+  emulate -L zsh
+
+  [[ $CONTEXT == start ]] || return 0
+
+  while true; do
+    zle .recursive-edit
+    local -i ret=$?
+    [[ $ret == 0 && $KEYS == $'\4' ]] || break
+    [[ -o ignore_eof ]] || exit 0
+  done
+
+  local saved_prompt=$PROMPT
+  local saved_rprompt=$RPROMPT
+  PROMPT=''
+  RPROMPT=''
+  zle .reset-prompt
+  PROMPT=$saved_prompt
+  RPROMPT=$saved_rprompt
+
+  if (( ret )); then
+    zle .send-break
+  else
+    zle .accept-line
+  fi
+  return ret
+}
+
+zle -N zle-line-init
+
+# Load starship theme
+# line 1: `starship` binary as command, from github release
+# line 2: starship setup at clone(create init.zsh, completion)
+# line 3: pull behavior same as clone, source init.zsh
+zinit ice as"command" from"gh-r" \
+          atclone"./starship init zsh > init.zsh; ./starship completions zsh > _starship" \
+          atpull"%atclone" src"init.zsh"
+zinit light starship/starship
 
 # Add in zsh plugins
 zinit light zsh-users/zsh-syntax-highlighting
@@ -30,12 +61,11 @@ zinit light Aloxaf/fzf-tab
 zinit snippet OMZP::sudo
 
 # Load completions
+autoload bashcompinit
+bashcompinit
 autoload -Uz compinit && compinit
 
 zinit cdreplay -q
-
-# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
-[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
 # Keybindings
 bindkey -e
@@ -68,17 +98,23 @@ alias ls='ls --color'
 alias vim='nvim'
 alias c='clear'
 
-source /home/linmor/dev/vess/work_scripts/bashit
-alias make-docker='/home/linmor/dev/vess/docker-dev/docker-run.sh make'
 alias config='/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
-alias bf='echo "1\n1" | buildit && echo "1\n1" | flashit'
-alias bu='echo "4" | buildit'
-alias bclean='echo "5" | buildit'
+alias katt="cat"
+alias devsdk="source /opt/verilix/master/environment-setup-cortexa7t2hf-neon-fslc-linux-gnueabi"
+
+function set-title() {
+  TITLE="\[\e]2;$*\a\]"
+  printf "\e]2;'$TITLE'\a"
+}
 
 path+=$HOME/.local/bin
+path+=/opt/nvim/
+path+=$HOME/bin
 
 export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm
+export VISUAL=nvim;
+export EDITOR=nvim;
 
 source "$HOME/.cargo/env"
 
@@ -86,3 +122,11 @@ source "$HOME/.cargo/env"
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 eval "$(fzf --zsh)"
 eval "$(zoxide init --cmd cd zsh)"
+export DIRENV_LOG_FORMAT=""
+eval "$(direnv hook zsh)"
+
+# pyenv
+# export PYENV_ROOT="$HOME/.pyenv"
+# export PATH="$PYENV_ROOT/bin:$PATH"
+# eval "$(pyenv init --path)"
+# eval "$(pyenv init -)"
