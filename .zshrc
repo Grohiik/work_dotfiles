@@ -10,6 +10,9 @@ fi
 # Source/Load zinit
 source "${ZINIT_HOME}/zinit.zsh"
 
+# TERM to prevent tmux not working with autosuggestion
+export TERM=xterm-256color
+
 # Enable transient prompt
 # Makes the prompt "disapear" on old cmd output
 zle-line-init() {
@@ -98,7 +101,12 @@ alias ls='ls --color'
 alias vim='nvim'
 alias c='clear'
 
+source /home/linmor/dev/vess/work_scripts/bashit
+alias make-docker='/home/linmor/dev/vess/docker-dev/docker-run.sh make'
 alias config='/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
+alias bf='echo "1\n1" | buildit && echo "1\n1" | flashit'
+alias bu='echo "4" | buildit'
+alias bclean='echo "5" | buildit'
 alias katt="cat"
 alias devsdk="source /opt/verilix/master/environment-setup-cortexa7t2hf-neon-fslc-linux-gnueabi"
 
@@ -130,3 +138,15 @@ eval "$(direnv hook zsh)"
 # export PATH="$PYENV_ROOT/bin:$PATH"
 # eval "$(pyenv init --path)"
 # eval "$(pyenv init -)"
+ 
+note() { 
+  dir=$HOME/Documents/daily_notes
+  if [[ $1 ]]; then
+    f=$dir/project_notes/$1.md
+    dat_tag=""
+  else
+    f=$dir/$(date +"%Y-%m-%d").md
+    dat_tag=$(date +"%H:%M")
+  fi
+  { echo $dat_tag ; echo ; } >> "$f" ; cd $dir && vim + "$f"; cd -
+}
